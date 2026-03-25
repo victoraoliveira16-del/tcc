@@ -1,0 +1,80 @@
+/* --- ESTILO CLEAN E BÁSICO PARA O BEM-VINDO --- */
+
+.welcome-page {
+    background-color: #f4f7f6;
+    /* Um cinza bem clarinho, relaxante */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+    font-family: 'Segoe UI', Arial, sans-serif;
+}
+
+.welcome-card {
+    background: #ffffff;
+    padding: 40px;
+    border-radius: 15px;
+    /* Arredondamento suave, não exagerado */
+    text-align: center;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    /* Sombra bem leve */
+    color: #333;
+    max-width: 400px;
+    width: 90%;
+    border: 1px solid #ddd;
+    /* Borda fininha para definir o card */
+}
+
+/* Reutilizando sua logo do topo */
+.welcome-card .logo {
+    font-size: 24px;
+    font-weight: bold;
+    color: #1a237e;
+    margin-bottom: 20px;
+}
+
+.welcome-card .logo span {
+    font-size: 10px;
+    display: block;
+    letter-spacing: 2px;
+    color: #777;
+}
+
+.welcome-card h1 {
+    font-size: 24px;
+    color: #1a237e;
+    margin-bottom: 10px;
+}
+
+.welcome-card p {
+    font-size: 15px;
+    color: #666;
+    line-height: 1.5;
+    margin-bottom: 30px;
+}
+
+/* Botão Sólido e Direto */
+.btn-enter {
+    display: block;
+    background-color: #1a237e;
+    /* Azul igual ao da logo */
+    color: white;
+    padding: 14px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 600;
+    transition: background 0.2s;
+}
+
+.btn-enter:hover {
+    background-color: #0d47a1;
+    /* Escurece levemente no hover */
+}
+
+/* Google Translate Simples */
+#google_translate_element {
+    margin-top: 20px;
+    border-top: 1px solid #eee;
+    padding-top: 15px;
+}
