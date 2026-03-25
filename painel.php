@@ -173,14 +173,19 @@ try {
                         </select>
                     </div>
 
-                    
+
                     <div class="input-group">
                         <label>💳 Método de Pagamento</label>
-                        <select name="metodo" required>
+                        <select name="metodo" id="metodo_pagamento" required onchange="verificarPix()">
                             <option value="pix">Pix</option>
                             <option value="dinheiro">Dinheiro</option>
-                            <option value="cartao">Cartão de Crédito/Débito</option>
                         </select>
+                    </div>
+
+                    <div id="area-pix" style="display: none; text-align: center; margin: 20px 0;">
+                        <p style="font-size: 12px; color: #666; margin-bottom: 10px;">Escaneie o QR Code abaixo para pagar:</p>
+                        <img src="_imagens/qrcode.png" alt="QR Code Pix" style="width: 200px; border: 1px solid #ddd; padding: 10px; border-radius: 10px; background: white;">
+                        <p style="font-weight: bold; color: #1a237e; margin-top: 5px;">Chave Pix: seu@email.com</p>
                     </div>
                     <button type="submit" class="btn-submit" style="background-color: #28a745;">Confirmar Pagamento</button>
                 </form>

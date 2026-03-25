@@ -49,3 +49,14 @@ function atualizarValorMulta() {
         inputValor.value = "R$ " + parseFloat(valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
     }
 }
+
+function verificarPix() {
+    const metodo = document.getElementById('metodo_pagamento').value;
+    const areaPix = document.getElementById('area-pix');
+
+    if (metodo === 'pix') {
+        areaPix.style.display = 'block'; // Mostra o QR Code
+    } else {
+        areaPix.style.display = 'none';  // Esconde se for outro método
+    }
+}
