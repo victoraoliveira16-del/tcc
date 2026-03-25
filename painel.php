@@ -1,41 +1,32 @@
 <?php
 require_once 'config.php';
+require_once 'emprestimo.php'; // Certifique-se de que o arquivo existe
+
+$servico = new Emprestimo();
 
 try {
+    // Reutilizando a conexão da classe ou criando uma local para a listagem
     $dsn = "mysql:host=" . DB_HOST . ";port=" . DB_PORT . ";dbname=" . DB_NAME . ";charset=" . DB_CHARSET;
     $pdo = new PDO($dsn, DB_USER, DB_PASS);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
     if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['btn_confirmar'])) {
-        $leitor = $_POST['leitor'];
+        $leitor = trim($_POST['leitor']);
         $livro = $_POST['livro'];
         $prazo_tempo = $_POST['prazo_tempo'];
 
-        // VALIDAÇÃO: Verifica se o livro já possui um empréstimo ativo
+        // 1. Validação de duplicidade (Melhor manter aqui ou mover para a classe)
         $checkSql = "SELECT COUNT(*) FROM emprestimos WHERE livro_nome = ? AND status = 'ativo'";
         $checkStmt = $pdo->prepare($checkSql);
         $checkStmt->execute([$livro]);
-        $livroJaEmprestado = $checkStmt->fetchColumn();
 
-        if ($livroJaEmprestado > 0) {
-            echo "<script>alert('❌ Este livro já está emprestado no momento!');</script>";
+        if ($checkStmt->fetchColumn() > 0) {
+            echo "<script>alert('❌ Este livro já está emprestado!');</script>";
         } else {
-            // Calcula a data de devolução
-            $data_devolucao = date('Y-m-d', strtotime("+$prazo_tempo"));
-
-            $sql = "INSERT INTO emprestimos (leitor, livro_nome, data_devolucao_prevista, status) VALUES (?, ?, ?, 'ativo')";
-            $stmt = $pdo->prepare($sql);
-
-            if ($stmt->execute([$leitor, $livro, $data_devolucao])) {
-                $data_formatada = date('d/m/Y', strtotime($data_devolucao));
-                echo "<script>
-                        alert('✅ Empréstimo realizado! Devolução em: $data_formatada');
-                        window.location.href = window.location.href; 
-                      </script>";
-                exit;
-            } else {
-                echo "<script>alert('❌ Erro ao registrar no banco.');</script>";
-            }
+            // 2. Chamada da classe Emprestimo para registrar
+            $resultado = $servico->registrar($leitor, $livro, $prazo_tempo);
+            echo "<script>alert('$resultado'); window.location.href = 'painel.php';</script>";
+            exit;
         }
     }
 } catch (Exception $e) {
@@ -113,25 +104,32 @@ try {
                             $consulta = $pdo->query("SELECT * FROM emprestimos WHERE status = 'ativo'");
                             $contador = 1;
                             while ($linha = $consulta->fetch(PDO::FETCH_ASSOC)) {
-                                $hoje = new DateTime();
+                                // Ajuste no cálculo de atraso
+                                $hoje = new DateTime('today');
                                 $dataEntrega = new DateTime($linha['data_devolucao_prevista']);
+
                                 $multaTexto = "No prazo";
                                 $corMulta = "#4caf50";
 
                                 if ($hoje > $dataEntrega) {
-                                    $diasAtraso = $hoje->diff($dataEntrega)->days;
+                                    $diferenca = $hoje->diff($dataEntrega);
+                                    $diasAtraso = $diferenca->days;
                                     $valorMulta = $diasAtraso * 2.50;
                                     $multaTexto = "R$ " . number_format($valorMulta, 2, ',', '.');
                                     $corMulta = "#ff5252";
                                 }
 
+                                // Uso de htmlspecialchars para segurança
+                                $leitor_safe = htmlspecialchars($linha['leitor']);
+                                $livro_safe = htmlspecialchars($linha['livro_nome']);
+
                                 echo "<tr>
                                         <td>{$contador}</td>
-                                        <td>{$linha['leitor']}</td>
-                                        <td>{$linha['livro_nome']}</td>
+                                        <td>{$leitor_safe}</td>
+                                        <td>{$livro_safe}</td>
                                         <td style='color: {$corMulta}; font-weight: bold;'>{$multaTexto}</td>
                                         <td>
-                                            <a href='finalizar_devolucao.php?id={$linha['id']}' class='btn-devolver'>Devolver</a>
+                                            <a href='finalizar_devolucao.php?id={$linha['id']}' class='btn-devolver' onclick='return confirm(\"Confirmar devolução?\")'>Devolver</a>
                                         </td>
                                       </tr>";
                                 $contador++;
@@ -145,7 +143,7 @@ try {
     </main>
 
     <script>
-        // Seleção dos elementos (o seu "controle remoto")
+        // Mantive sua lógica de abas original que já funciona bem
         const btnEmp = document.getElementById('btn-aba-emp');
         const btnDev = document.getElementById('btn-aba-dev');
         const secEmp = document.getElementById('secao-emprestimo');
@@ -158,8 +156,8 @@ try {
                 btnEmp.classList.remove('active');
                 btnDev.classList.add('active');
                 subtitle.innerText = "Devoluções e Atrasos";
-                secEmp.style.display = "none"; 
-                secDev.style.display = "block"; 
+                secEmp.style.display = "none";
+                secDev.style.display = "block";
                 card.style.maxWidth = "800px";
             } else {
                 btnDev.classList.remove('active');

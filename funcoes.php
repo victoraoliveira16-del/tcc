@@ -11,4 +11,20 @@ function calcularMulta($dataPrevista)
         return $diasAtraso * $valorMultaPorDia;
     }
     return 0;
+
+    // Dentro do seu while no painel.php
+    require_once 'funcoes.php';
+
+    while ($linha = $consulta->fetch(PDO::FETCH_ASSOC)) {
+        $valorMulta = calcularMulta($linha['data_devolucao_prevista']); // Usa sua função
+
+        if ($valorMulta > 0) {
+            $multaTexto = "R$ " . number_format($valorMulta, 2, ',', '.');
+            $corMulta = "#ff5252";
+        } else {
+            $multaTexto = "No prazo";
+            $corMulta = "#4caf50";
+        }
+        // ... restante do echo tr ...
+    }
 }
