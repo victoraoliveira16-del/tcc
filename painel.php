@@ -1,4 +1,5 @@
 <?php
+session_start();
 require_once 'config.php';
 require_once 'emprestimo.php';
 
@@ -9,25 +10,36 @@ try {
     $pdo = new PDO($dsn, DB_USER, DB_PASS);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['btn_confirmar'])) {
-        $leitor = trim($_POST['leitor']);
-        $livro = $_POST['livro'];
-        $prazo_tempo = $_POST['prazo_tempo'];
-
-        // 1. Validação de duplicidade
-        $checkSql = "SELECT COUNT(*) FROM emprestimos WHERE livro_nome = ? AND status = 'ativo'";
-        $checkStmt = $pdo->prepare($checkSql);
-        $checkStmt->execute([$livro]);
-
-        if ($checkStmt->fetchColumn() > 0) {
-            $mensagem_toast = "❌ Este livro já está emprestado!";
-            $tipo_toast = "background-color: #ff5252;"; // Vermelho
-        } else {
-            // 2. Registra o empréstimo
-            $resultado = $servico->registrar($leitor, $livro, $prazo_tempo);
-            $mensagem_toast = "✅ " . $resultado;
-            $tipo_toast = "background-color: #28a745;"; // Verde
+    // --- COLOQUE O CÓDIGO AQUI ---
+    $listaMultas = [];
+    $consultaMultas = $pdo->query("SELECT * FROM emprestimos WHERE status = 'ativo'");
+    while ($row = $consultaMultas->fetch(PDO::FETCH_ASSOC)) {
+        $hoje = new DateTime('today');
+        $prevista = new DateTime($row['data_devolucao_prevista']);
+        if ($hoje > $prevista) {
+            $dias = $hoje->diff($prevista)->days;
+            $valor = $dias * 2.50;
+            $listaMultas[] = [
+                'id' => $row['id'],
+                'leitor' => $row['leitor'],
+                'valor' => $valor,
+                'valor_formatado' => number_format($valor, 2, ',', '.')
+            ];
         }
+    }
+    // --- FIM DO BLOCO DE MULTAS ---
+
+    // Lógica de Processamento de Empréstimo (já existente no seu código)
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['btn_confirmar'])) {
+        // ... seu código de confirmação de empréstimo ...
+    }
+
+    // Captura mensagens de outras páginas
+    if (isset($_SESSION['toast_msg'])) {
+        $mensagem_toast = $_SESSION['toast_msg'];
+        $tipo_toast = $_SESSION['toast_type'];
+        unset($_SESSION['toast_msg']);
+        unset($_SESSION['toast_type']);
     }
 } catch (Exception $e) {
     $mensagem_toast = "Erro: " . $e->getMessage();
@@ -50,7 +62,6 @@ try {
             <?php echo $mensagem_toast; ?>
         </div>
         <script>
-            // Remove o elemento após 4 segundos
             setTimeout(() => {
                 const toast = document.querySelector('.toast-message');
                 if (toast) toast.style.display = 'none';
@@ -59,11 +70,11 @@ try {
     <?php endif; ?>
 
     <header class="top-nav">
-
         <div class="logo">LIVH <span>BOOKSTORE</span></div>
         <nav>
             <button id="btn-aba-emp" class="nav-btn active">Empréstimo</button>
             <button id="btn-aba-dev" class="nav-btn">Devoluções/Atrasos</button>
+            <button id="btn-aba-pag" class="nav-btn">Pagamentos</button>
         </nav>
     </header>
 
@@ -119,32 +130,25 @@ try {
                             $consulta = $pdo->query("SELECT * FROM emprestimos WHERE status = 'ativo'");
                             $contador = 1;
                             while ($linha = $consulta->fetch(PDO::FETCH_ASSOC)) {
-                                // Ajuste no cálculo de atraso
                                 $hoje = new DateTime('today');
                                 $dataEntrega = new DateTime($linha['data_devolucao_prevista']);
-
                                 $multaTexto = "No prazo";
                                 $corMulta = "#4caf50";
 
                                 if ($hoje > $dataEntrega) {
                                     $diferenca = $hoje->diff($dataEntrega);
-                                    $diasAtraso = $diferenca->days;
-                                    $valorMulta = $diasAtraso * 2.50;
+                                    $valorMulta = $diferenca->days * 2.50;
                                     $multaTexto = "R$ " . number_format($valorMulta, 2, ',', '.');
                                     $corMulta = "#ff5252";
                                 }
 
-                                // Uso de htmlspecialchars para segurança
-                                $leitor_safe = htmlspecialchars($linha['leitor']);
-                                $livro_safe = htmlspecialchars($linha['livro_nome']);
-
                                 echo "<tr>
                                         <td>{$contador}</td>
-                                        <td>{$leitor_safe}</td>
-                                        <td>{$livro_safe}</td>
+                                        <td>" . htmlspecialchars($linha['leitor']) . "</td>
+                                        <td>" . htmlspecialchars($linha['livro_nome']) . "</td>
                                         <td style='color: {$corMulta}; font-weight: bold;'>{$multaTexto}</td>
                                         <td>
-                                            <a href='finalizar_devolucao.php?id={$linha['id']}' class='btn-devolver' onclick='return confirm(\"Confirmar devolução?\")'>Devolver</a>
+                                            <a href='finalizar_devolucao.php?id={$linha['id']}' class='btn-devolver' onclick='return confirm(\"Confirmar?\")'>Devolver</a>
                                         </td>
                                       </tr>";
                                 $contador++;
@@ -154,31 +158,64 @@ try {
                     </table>
                 </div>
             </div>
+
+            <div id="secao-pagamento" style="display: none;">
+                <form action="processa_pagamento.php" method="POST">
+                    <div class="input-group">
+                        <label>👤 Selecione o Leitor em Atraso</label>
+                        <select id="select-pagamento" name="emprestimo_id" required onchange="atualizarValorMulta()">
+                            <option value="" disabled selected>Escolha um leitor...</option>
+                            <?php foreach ($listaMultas as $multa): ?>
+                                <option value="<?= $multa['id'] ?>" data-valor="<?= $multa['valor'] ?>">
+                                    <?= htmlspecialchars($multa['leitor']) ?> (R$ <?= $multa['valor_formatado'] ?>)
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+
+                    
+                    <div class="input-group">
+                        <label>💳 Método de Pagamento</label>
+                        <select name="metodo" required>
+                            <option value="pix">Pix</option>
+                            <option value="dinheiro">Dinheiro</option>
+                            <option value="cartao">Cartão de Crédito/Débito</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn-submit" style="background-color: #28a745;">Confirmar Pagamento</button>
+                </form>
+            </div>
+
         </div>
     </main>
 
     <script>
-        // Mantive sua lógica de abas original que já funciona bem
         const btnEmp = document.getElementById('btn-aba-emp');
         const btnDev = document.getElementById('btn-aba-dev');
+        const btnPag = document.getElementById('btn-aba-pag');
         const secEmp = document.getElementById('secao-emprestimo');
         const secDev = document.getElementById('secao-devolucoes');
+        const secPag = document.getElementById('secao-pagamento');
         const subtitle = document.getElementById('card-subtitle');
         const card = document.getElementById('main-card');
 
         function trocarAba(aba) {
+            [btnEmp, btnDev, btnPag].forEach(b => b.classList.remove('active'));
+            [secEmp, secDev, secPag].forEach(s => s.style.display = "none");
+
             if (aba === 'dev') {
-                btnEmp.classList.remove('active');
                 btnDev.classList.add('active');
                 subtitle.innerText = "Devoluções e Atrasos";
-                secEmp.style.display = "none";
                 secDev.style.display = "block";
                 card.style.maxWidth = "800px";
+            } else if (aba === 'pag') {
+                btnPag.classList.add('active');
+                subtitle.innerText = "Liquidar Multas";
+                secPag.style.display = "block";
+                card.style.maxWidth = "450px";
             } else {
-                btnDev.classList.remove('active');
                 btnEmp.classList.add('active');
                 subtitle.innerText = "Novo Empréstimo";
-                secDev.style.display = "none";
                 secEmp.style.display = "block";
                 card.style.maxWidth = "450px";
             }
@@ -186,6 +223,7 @@ try {
 
         btnDev.addEventListener('click', () => trocarAba('dev'));
         btnEmp.addEventListener('click', () => trocarAba('emp'));
+        btnPag.addEventListener('click', () => trocarAba('pag'));
     </script>
 </body>
 

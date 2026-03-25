@@ -36,3 +36,16 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 });
+
+function atualizarValorMulta() {
+    const select = document.getElementById('select-pagamento');
+    const inputValor = document.getElementById('valor_exibicao');
+
+    // Pega o valor da multa guardado no atributo 'data-valor' da opção selecionada
+    const valor = select.options[select.selectedIndex].getAttribute('data-valor');
+
+    if (valor) {
+        // Formata para exibir como moeda
+        inputValor.value = "R$ " + parseFloat(valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+    }
+}

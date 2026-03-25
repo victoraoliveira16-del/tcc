@@ -1,38 +1,28 @@
 <?php
 require_once 'config.php';
-require_once 'funcoes.php';
 
-/**
- * Função para calcular a multa de um empréstimo específico
- * @param int $id_emprestimo ID do registro na tabela 'emprestimos'
- * @param float $valor_diaria Valor da multa por dia de atraso (ex: 2.00)
- * @return array Retorna os dias de atraso e o valor total da multa
- */
-function calcularMulta($conn, $id_emprestimo, $valor_diaria = 2.50)
+function calcularMultaPDO($pdo, $id_emprestimo, $valor_diaria = 2.50)
 {
-    // 1. Busca os dados do empréstimo
+    // 1. Busca os dados usando PDO (compatível com seu sistema)
     $sql = "SELECT data_devolucao_prevista, data_devolucao_real 
             FROM emprestimos 
             WHERE id = ?";
 
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param("i", $id_emprestimo);
-    $stmt->execute();
-    $resultado = $stmt->get_result();
-    $dados = $resultado->fetch_assoc();
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute([$id_emprestimo]);
+    $dados = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    if (!$dados) return ['dias' => 0, 'multa' => 0];
+    if (!$dados) return ['atrasado' => false, 'dias' => 0, 'multa' => 0];
 
-    // 2. Define a data de comparação (Se já devolveu, usa a real. Se não, usa a data de hoje)
-    $hoje = new DateTime();
+    // 2. Comparação de datas
+    $hoje = new DateTime('today'); // 'today' zera as horas para o cálculo ser exato por dia
     $prevista = new DateTime($dados['data_devolucao_prevista']);
 
-    // Se ainda não foi devolvido, comparamos com a data atual
     $data_final = ($dados['data_devolucao_real'])
         ? new DateTime($dados['data_devolucao_real'])
         : $hoje;
 
-    // 3. Lógica do atraso
+    // 3. Cálculo
     if ($data_final > $prevista) {
         $intervalo = $data_final->diff($prevista);
         $dias_atraso = $intervalo->days;
@@ -48,16 +38,22 @@ function calcularMulta($conn, $id_emprestimo, $valor_diaria = 2.50)
     return ['atrasado' => false, 'dias' => 0, 'multa' => 0.00];
 }
 
-// Exemplo de uso se este arquivo for acessado via GET (ex: calcula_multa.php?id=5)
-if (isset($_GET['id'])) {
-    $id = intval($_GET['id']);
-    $resultado = calcularMulta($conn, $id);
+// Exemplo de integração com sua conexão existente
+try {
+    $dsn = "mysql:host=" . DB_HOST . ";dbname=" . DB_NAME . ";charset=" . DB_CHARSET;
+    $pdo = new PDO($dsn, DB_USER, DB_PASS);
 
-    if ($resultado['atrasado']) {
-        echo "Atenção: Livro com " . $resultado['dias'] . " dias de atraso.";
-        echo " Valor da multa: R$ " . number_format($resultado['multa'], 2, ',', '.');
-    } else {
-        echo "Empréstimo em dia ou devolvido no prazo.";
+    if (isset($_GET['id'])) {
+        $id = intval($_GET['id']);
+        $resultado = calcularMultaPDO($pdo, $id);
+
+        if ($resultado['atrasado']) {
+            echo "Atenção: " . $resultado['dias'] . " dias de atraso. Multa: R$ " . number_format($resultado['multa'], 2, ',', '.');
+        } else {
+            echo "Em dia.";
+        }
     }
+} catch (PDOException $e) {
+    echo "Erro de conexão: " . $e->getMessage();
 }
 ?>
