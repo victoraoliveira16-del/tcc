@@ -1,11 +1,10 @@
 <?php
 require_once 'config.php';
-require_once 'emprestimo.php'; // Certifique-se de que o arquivo existe
+require_once 'emprestimo.php';
 
 $servico = new Emprestimo();
 
 try {
-    // Reutilizando a conexão da classe ou criando uma local para a listagem
     $dsn = "mysql:host=" . DB_HOST . ";port=" . DB_PORT . ";dbname=" . DB_NAME . ";charset=" . DB_CHARSET;
     $pdo = new PDO($dsn, DB_USER, DB_PASS);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
@@ -15,22 +14,24 @@ try {
         $livro = $_POST['livro'];
         $prazo_tempo = $_POST['prazo_tempo'];
 
-        // 1. Validação de duplicidade (Melhor manter aqui ou mover para a classe)
+        // 1. Validação de duplicidade
         $checkSql = "SELECT COUNT(*) FROM emprestimos WHERE livro_nome = ? AND status = 'ativo'";
         $checkStmt = $pdo->prepare($checkSql);
         $checkStmt->execute([$livro]);
 
         if ($checkStmt->fetchColumn() > 0) {
-            echo "<script>alert('❌ Este livro já está emprestado!');</script>";
+            $mensagem_toast = "❌ Este livro já está emprestado!";
+            $tipo_toast = "background-color: #ff5252;"; // Vermelho
         } else {
-            // 2. Chamada da classe Emprestimo para registrar
+            // 2. Registra o empréstimo
             $resultado = $servico->registrar($leitor, $livro, $prazo_tempo);
-            echo "<script>alert('$resultado'); window.location.href = 'painel.php';</script>";
-            exit;
+            $mensagem_toast = "✅ " . $resultado;
+            $tipo_toast = "background-color: #28a745;"; // Verde
         }
     }
 } catch (Exception $e) {
-    echo "<script>alert('Erro: " . addslashes($e->getMessage()) . "');</script>";
+    $mensagem_toast = "Erro: " . $e->getMessage();
+    $tipo_toast = "background-color: #ff5252;";
 }
 ?>
 <!DOCTYPE html>
@@ -44,7 +45,21 @@ try {
 </head>
 
 <body>
+    <?php if (isset($mensagem_toast)): ?>
+        <div class="toast-message" style="<?php echo $tipo_toast; ?>">
+            <?php echo $mensagem_toast; ?>
+        </div>
+        <script>
+            // Remove o elemento após 4 segundos
+            setTimeout(() => {
+                const toast = document.querySelector('.toast-message');
+                if (toast) toast.style.display = 'none';
+            }, 4000);
+        </script>
+    <?php endif; ?>
+
     <header class="top-nav">
+
         <div class="logo">LIVH <span>BOOKSTORE</span></div>
         <nav>
             <button id="btn-aba-emp" class="nav-btn active">Empréstimo</button>

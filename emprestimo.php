@@ -16,14 +16,13 @@ class Emprestimo
         }
     }
 
-    public function registrar($leitor, $livro, $semanas)
+    public function registrar($leitor, $livro, $prazo_tempo)
     {
-        // 1. Calcula a data de devolução baseada nas semanas escolhidas
-        $dataDevolucao = date('Y-m-d', strtotime("+$semanas weeks"));
+        // Calcula a data baseada no valor do select (ex: "1 day", "2 weeks")
+        $dataDevolucao = date('Y-m-d', strtotime("+$prazo_tempo"));
 
-        // 2. Prepara o SQL para inserir no banco
         $sql = "INSERT INTO emprestimos (leitor, livro_nome, data_devolucao_prevista, status) 
-                VALUES (:leitor, :livro, :data, 'ativo')";
+            VALUES (:leitor, :livro, :data, 'ativo')";
 
         try {
             $stmt = $this->pdo->prepare($sql);
@@ -32,9 +31,11 @@ class Emprestimo
                 'livro'  => $livro,
                 'data'   => $dataDevolucao
             ]);
-            return "Empréstimo de '$livro' para $leitor realizado com sucesso!";
+
+            $dataBR = date('d/m/Y', strtotime($dataDevolucao));
+            return "✅ Empréstimo de '$livro' realizado! 📅 Devolução em: $dataBR";
         } catch (PDOException $e) {
-            return "Erro ao salvar no banco: " . $e->getMessage();
+            return "❌ Erro ao salvar: " . $e->getMessage();
         }
     }
 }

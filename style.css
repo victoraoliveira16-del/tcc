@@ -209,3 +209,41 @@ th {
         transform: translateY(0);
     }
 }
+
+/* Notificação Toast */
+.toast-message {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: white;
+    padding: 15px 30px;
+    border-radius: 12px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    z-index: 9999;
+    font-weight: bold;
+    font-size: 1rem;
+    animation: slideDownUp 4s forwards;
+}
+
+@keyframes slideDownUp {
+    0% {
+        transform: translate(-50%, -100%);
+        opacity: 0;
+    }
+
+    10% {
+        transform: translate(-50%, 0);
+        opacity: 1;
+    }
+
+    90% {
+        transform: translate(-50%, 0);
+        opacity: 1;
+    }
+
+    100% {
+        transform: translate(-50%, -100%);
+        opacity: 0;
+    }
+}
