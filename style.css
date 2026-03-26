@@ -7,7 +7,10 @@
 
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background-color: #f0f2f5;
+    /* Substituído o cinza sólido por um degradê de Azul para Branco */
+    background: linear-gradient(135deg, #1a237e 0%, #ffffff 100%);
+    background-attachment: fixed;
+    /* Mantém o fundo fixo ao rolar a página */
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -208,6 +211,62 @@ th {
         opacity: 1;
         transform: translateY(0);
     }
+}
+
+/* Área de Pagamento com Cartão */
+#area-cartao {
+    display: none;
+    /* Escondido por padrão, controlado pelo JS */
+    text-align: left;
+    margin: 20px 0;
+    background-color: #f9f9f9;
+    padding: 15px;
+    border-radius: 10px;
+    border: 1px solid #ddd;
+    animation: fadeIn 0.5s ease-in-out;
+}
+
+.cartao-titulo {
+    font-size: 13px;
+    color: #1a237e;
+    font-weight: bold;
+    margin-bottom: 10px;
+    text-align: center;
+}
+
+/* Estilo dos inputs dentro da área de cartão */
+.input-cartao {
+    background-color: white !important;
+    border: 1px solid #ccc !important;
+    color: #333 !important;
+    width: 100%;
+    padding: 12px;
+    border-radius: 10px;
+    font-size: 1rem;
+    outline: none;
+}
+
+.input-cartao::placeholder {
+    color: #999;
+}
+
+/* Ajuste para o layout de Validade e CVV lado a lado */
+.cartao-row {
+    display: flex;
+    gap: 10px;
+}
+
+.cartao-col-validade {
+    flex: 2;
+}
+
+.cartao-col-cvv {
+    flex: 1;
+}
+
+/* Garante que os labels fiquem escuros no fundo cinza */
+#area-cartao label {
+    color: #333 !important;
 }
 
 /* Notificação Toast */

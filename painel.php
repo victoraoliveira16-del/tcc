@@ -10,7 +10,6 @@ try {
     $pdo = new PDO($dsn, DB_USER, DB_PASS);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-    // --- COLOQUE O CÓDIGO AQUI ---
     $listaMultas = [];
     $consultaMultas = $pdo->query("SELECT * FROM emprestimos WHERE status = 'ativo'");
     while ($row = $consultaMultas->fetch(PDO::FETCH_ASSOC)) {
@@ -27,18 +26,31 @@ try {
             ];
         }
     }
-    // --- FIM DO BLOCO DE MULTAS ---
 
-    // Lógica de Processamento de Empréstimo (já existente no seu código)
     if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['btn_confirmar'])) {
-        // ... seu código de confirmação de empréstimo ...
+        $leitor = trim($_POST['leitor']);
+        $livro = $_POST['livro'];
+        $prazo_tempo = $_POST['prazo_tempo'];
+
+        $checkSql = "SELECT COUNT(*) FROM emprestimos WHERE livro_nome = ? AND status = 'ativo'";
+        $checkStmt = $pdo->prepare($checkSql);
+        $checkStmt->execute([$livro]);
+
+        if ($checkStmt->fetchColumn() > 0) {
+            $mensagem_toast = "❌ Este livro já está emprestado!";
+            $tipo_toast = "background-color: #ff5252;";
+        } else {
+            $resultado = $servico->registrar($leitor, $livro, $prazo_tempo);
+            $mensagem_toast = "✅ " . $resultado;
+            $tipo_toast = "background-color: #28a745;";
+        }
     }
 
-    // Captura mensagens de outras páginas
+    // No topo do painel.php, logo após o session_start() e a conexão PDO
     if (isset($_SESSION['toast_msg'])) {
         $mensagem_toast = $_SESSION['toast_msg'];
         $tipo_toast = $_SESSION['toast_type'];
-        unset($_SESSION['toast_msg']);
+        unset($_SESSION['toast_msg']); // Limpa para não repetir a mensagem ao atualizar
         unset($_SESSION['toast_type']);
     }
 } catch (Exception $e) {
@@ -134,22 +146,18 @@ try {
                                 $dataEntrega = new DateTime($linha['data_devolucao_prevista']);
                                 $multaTexto = "No prazo";
                                 $corMulta = "#4caf50";
-
                                 if ($hoje > $dataEntrega) {
                                     $diferenca = $hoje->diff($dataEntrega);
                                     $valorMulta = $diferenca->days * 2.50;
                                     $multaTexto = "R$ " . number_format($valorMulta, 2, ',', '.');
                                     $corMulta = "#ff5252";
                                 }
-
                                 echo "<tr>
                                         <td>{$contador}</td>
                                         <td>" . htmlspecialchars($linha['leitor']) . "</td>
                                         <td>" . htmlspecialchars($linha['livro_nome']) . "</td>
                                         <td style='color: {$corMulta}; font-weight: bold;'>{$multaTexto}</td>
-                                        <td>
-                                            <a href='finalizar_devolucao.php?id={$linha['id']}' class='btn-devolver' onclick='return confirm(\"Confirmar?\")'>Devolver</a>
-                                        </td>
+                                        <td><a href='finalizar_devolucao.php?id={$linha['id']}' class='btn-devolver' onclick='return confirm(\"Confirmar?\")'>Devolver</a></td>
                                       </tr>";
                                 $contador++;
                             }
@@ -172,25 +180,29 @@ try {
                             <?php endforeach; ?>
                         </select>
                     </div>
-
-
                     <div class="input-group">
                         <label>💳 Método de Pagamento</label>
-                        <select name="metodo" id="metodo_pagamento" required onchange="verificarPix()">
+                        <select name="metodo" id="metodo_pagamento" required onchange="gerenciarMetodosPagamento()">
+                            <option value="" disabled selected>Escolha um método...</option>
                             <option value="pix">Pix</option>
-                            <option value="dinheiro">Dinheiro</option>
+                            <option value="cartao">Crédito/Débito</option>
                         </select>
                     </div>
-
                     <div id="area-pix" style="display: none; text-align: center; margin: 20px 0;">
-                        <p style="font-size: 12px; color: #666; margin-bottom: 10px;">Escaneie o QR Code abaixo para pagar:</p>
-                        <img src="_imagens/qrcode.png" alt="QR Code Pix" style="width: 200px; border: 1px solid #ddd; padding: 10px; border-radius: 10px; background: white;">
-                        <p style="font-weight: bold; color: #1a237e; margin-top: 5px;">Chave Pix: seu@email.com</p>
+                        <p style="font-size: 12px; color: #666;">Escaneie o QR Code abaixo:</p>
+                        <img src="_imagens/qr-code.png" alt="QR Code" style="width: 150px; padding: 10px; background: white;">
                     </div>
-                    <button type="submit" class="btn-submit" style="background-color: #28a745;">Confirmar Pagamento</button>
+                    <div id="area-cartao" style="display: none;">
+                        <p class="cartao-titulo">💳 Dados do Cartão</p>
+                        <input type="text" class="input-cartao" placeholder="0000 0000 0000 0000" style="margin-bottom:10px; width: 100%; padding: 10px; border-radius: 5px; border: 1px solid #ccc;">
+                        <div style="display: flex; gap: 5px;">
+                            <input type="text" class="input-cartao" placeholder="MM/AA" style="flex:1; padding: 10px; border-radius: 5px; border: 1px solid #ccc;">
+                            <input type="text" class="input-cartao" placeholder="CVV" style="flex:1; padding: 10px; border-radius: 5px; border: 1px solid #ccc;">
+                        </div>
+                    </div>
+                    <button type="submit" class="btn-submit" style="background-color: #28a745; margin-top: 15px;">Confirmar Pagamento</button>
                 </form>
             </div>
-
         </div>
     </main>
 
@@ -224,6 +236,18 @@ try {
                 secEmp.style.display = "block";
                 card.style.maxWidth = "450px";
             }
+        }
+
+        function gerenciarMetodosPagamento() {
+            const metodo = document.getElementById('metodo_pagamento').value;
+            document.getElementById('area-pix').style.display = (metodo === 'pix') ? 'block' : 'none';
+            document.getElementById('area-cartao').style.display = (metodo === 'cartao') ? 'block' : 'none';
+        }
+
+        function atualizarValorMulta() {
+            const select = document.getElementById('select-pagamento');
+            const valor = select.options[select.selectedIndex].getAttribute('data-valor');
+            if (valor) console.log("Multa: R$ " + valor);
         }
 
         btnDev.addEventListener('click', () => trocarAba('dev'));
