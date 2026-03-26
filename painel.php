@@ -66,6 +66,7 @@ try {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LIVH Bookstore - Painel</title>
     <link rel="stylesheet" href="style.css">
+
 </head>
 
 <body>
@@ -133,6 +134,7 @@ try {
                                 <th>Nº</th>
                                 <th>Leitor</th>
                                 <th>Livro</th>
+                                <th>Entrega Prevista</th>
                                 <th>Multa</th>
                                 <th>Ação</th>
                             </tr>
@@ -144,21 +146,28 @@ try {
                             while ($linha = $consulta->fetch(PDO::FETCH_ASSOC)) {
                                 $hoje = new DateTime('today');
                                 $dataEntrega = new DateTime($linha['data_devolucao_prevista']);
+
+                                // Formata a data para o padrão brasileiro (DD/MM/AAAA)
+                                $dataFormatada = $dataEntrega->format('d/m/Y');
+
                                 $multaTexto = "No prazo";
                                 $corMulta = "#4caf50";
+
                                 if ($hoje > $dataEntrega) {
                                     $diferenca = $hoje->diff($dataEntrega);
                                     $valorMulta = $diferenca->days * 2.50;
                                     $multaTexto = "R$ " . number_format($valorMulta, 2, ',', '.');
                                     $corMulta = "#ff5252";
                                 }
+
                                 echo "<tr>
-                                        <td>{$contador}</td>
-                                        <td>" . htmlspecialchars($linha['leitor']) . "</td>
-                                        <td>" . htmlspecialchars($linha['livro_nome']) . "</td>
-                                        <td style='color: {$corMulta}; font-weight: bold;'>{$multaTexto}</td>
-                                        <td><a href='finalizar_devolucao.php?id={$linha['id']}' class='btn-devolver' onclick='return confirm(\"Confirmar?\")'>Devolver</a></td>
-                                      </tr>";
+                            <td>{$contador}</td>
+                            <td>" . htmlspecialchars($linha['leitor']) . "</td>
+                            <td>" . htmlspecialchars($linha['livro_nome']) . "</td>
+                            <td>{$dataFormatada}</td> 
+                            <td style='color: {$corMulta}; font-weight: bold;'>{$multaTexto}</td>
+                            <td><a href='finalizar_devolucao.php?id={$linha['id']}' class='btn-devolver' onclick='return confirm(\"Confirmar devolução?\")'>Devolver</a></td>
+                          </tr>";
                                 $contador++;
                             }
                             ?>
@@ -205,55 +214,7 @@ try {
             </div>
         </div>
     </main>
-
-    <script>
-        const btnEmp = document.getElementById('btn-aba-emp');
-        const btnDev = document.getElementById('btn-aba-dev');
-        const btnPag = document.getElementById('btn-aba-pag');
-        const secEmp = document.getElementById('secao-emprestimo');
-        const secDev = document.getElementById('secao-devolucoes');
-        const secPag = document.getElementById('secao-pagamento');
-        const subtitle = document.getElementById('card-subtitle');
-        const card = document.getElementById('main-card');
-
-        function trocarAba(aba) {
-            [btnEmp, btnDev, btnPag].forEach(b => b.classList.remove('active'));
-            [secEmp, secDev, secPag].forEach(s => s.style.display = "none");
-
-            if (aba === 'dev') {
-                btnDev.classList.add('active');
-                subtitle.innerText = "Devoluções e Atrasos";
-                secDev.style.display = "block";
-                card.style.maxWidth = "800px";
-            } else if (aba === 'pag') {
-                btnPag.classList.add('active');
-                subtitle.innerText = "Liquidar Multas";
-                secPag.style.display = "block";
-                card.style.maxWidth = "450px";
-            } else {
-                btnEmp.classList.add('active');
-                subtitle.innerText = "Novo Empréstimo";
-                secEmp.style.display = "block";
-                card.style.maxWidth = "450px";
-            }
-        }
-
-        function gerenciarMetodosPagamento() {
-            const metodo = document.getElementById('metodo_pagamento').value;
-            document.getElementById('area-pix').style.display = (metodo === 'pix') ? 'block' : 'none';
-            document.getElementById('area-cartao').style.display = (metodo === 'cartao') ? 'block' : 'none';
-        }
-
-        function atualizarValorMulta() {
-            const select = document.getElementById('select-pagamento');
-            const valor = select.options[select.selectedIndex].getAttribute('data-valor');
-            if (valor) console.log("Multa: R$ " + valor);
-        }
-
-        btnDev.addEventListener('click', () => trocarAba('dev'));
-        btnEmp.addEventListener('click', () => trocarAba('emp'));
-        btnPag.addEventListener('click', () => trocarAba('pag'));
-    </script>
+    <script src="script.js"></script>
 </body>
 
 </html>

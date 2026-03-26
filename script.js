@@ -1,62 +1,57 @@
 document.addEventListener('DOMContentLoaded', () => {
-    const btnEmprestimo = document.querySelectorAll('.nav-btn')[0];
-    const btnDevolucoes = document.querySelectorAll('.nav-btn')[1];
+    const btnEmp = document.getElementById('btn-aba-emp');
+    const btnDev = document.getElementById('btn-aba-dev');
+    const btnPag = document.getElementById('btn-aba-pag');
+    const secEmp = document.getElementById('secao-emprestimo');
+    const secDev = document.getElementById('secao-devolucoes');
+    const secPag = document.getElementById('secao-pagamento');
     const subtitle = document.getElementById('card-subtitle');
+    const card = document.getElementById('main-card');
+    const selectPagamento = document.getElementById('select-pagamento');
+    const metodoPagamento = document.getElementById('metodo_pagamento');
 
-    const secaoEmprestimo = document.getElementById('secao-emprestimo');
-    const secaoDevolucoes = document.getElementById('secao-devolucoes');
+    function trocarAba(aba) {
+        [btnEmp, btnDev, btnPag].forEach(b => b.classList.remove('active'));
+        [secEmp, secDev, secPag].forEach(s => s.style.display = "none");
 
-    // Trocar para Devoluções
-    btnDevolucoes.addEventListener('click', () => {
-        btnEmprestimo.classList.remove('active');
-        btnDevolucoes.classList.add('active');
-        subtitle.innerText = "Devoluções e Atrasos";
-
-        secaoEmprestimo.style.display = "none";  // Esconde o form
-        secaoDevolucoes.style.display = "block"; // Mostra as devoluções
-    });
-
-    // Trocar para Empréstimos (SEM RELOAD)
-    btnEmprestimo.addEventListener('click', () => {
-        btnDevolucoes.classList.remove('active');
-        btnEmprestimo.classList.add('active');
-        subtitle.innerText = "Empréstimos";
-
-        secaoEmprestimo.style.display = "block"; // Mostra o form
-        secaoDevolucoes.style.display = "none";  // Esconde as devoluções
-    });
-
-    // Validação de envio
-    const form = document.getElementById('form-emprestimo');
-    form.addEventListener('submit', (e) => {
-        const leitor = document.querySelector('input[name="leitor"]').value;
-        if (leitor.length < 3) {
-            e.preventDefault();
-            alert("Digite o nome completo.");
+        if (aba === 'dev') {
+            btnDev.classList.add('active');
+            subtitle.innerText = "Devoluções e Atrasos";
+            secDev.style.display = "block";
+            card.style.maxWidth = "800px";
+        } else if (aba === 'pag') {
+            btnPag.classList.add('active');
+            subtitle.innerText = "Liquidar Multas";
+            secPag.style.display = "block";
+            card.style.maxWidth = "450px";
+        } else {
+            btnEmp.classList.add('active');
+            subtitle.innerText = "Novo Empréstimo";
+            secEmp.style.display = "block";
+            card.style.maxWidth = "450px";
         }
-    });
+    }
+
+    window.gerenciarMetodosPagamento = function () {
+        const metodo = metodoPagamento.value;
+        document.getElementById('area-pix').style.display = (metodo === 'pix') ? 'block' : 'none';
+        document.getElementById('area-cartao').style.display = (metodo === 'cartao') ? 'block' : 'none';
+    };
+
+    window.atualizarValorMulta = function () {
+        const valor = selectPagamento.options[selectPagamento.selectedIndex].getAttribute('data-valor');
+        if (valor) console.log("Multa selecionada: R$ " + valor);
+    };
+
+    btnDev.addEventListener('click', () => trocarAba('dev'));
+    btnEmp.addEventListener('click', () => trocarAba('emp'));
+    btnPag.addEventListener('click', () => trocarAba('pag'));
+
+    const toast = document.querySelector('.toast-message');
+    if (toast) {
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            setTimeout(() => toast.style.display = 'none', 500);
+        }, 4000);
+    }
 });
-
-function atualizarValorMulta() {
-    const select = document.getElementById('select-pagamento');
-    const inputValor = document.getElementById('valor_exibicao');
-
-    // Pega o valor da multa guardado no atributo 'data-valor' da opção selecionada
-    const valor = select.options[select.selectedIndex].getAttribute('data-valor');
-
-    if (valor) {
-        // Formata para exibir como moeda
-        inputValor.value = "R$ " + parseFloat(valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
-    }
-}
-
-function verificarPix() {
-    const metodo = document.getElementById('metodo_pagamento').value;
-    const areaPix = document.getElementById('area-pix');
-
-    if (metodo === 'pix') {
-        areaPix.style.display = 'block'; // Mostra o QR Code
-    } else {
-        areaPix.style.display = 'none';  // Esconde se for outro método
-    }
-}
